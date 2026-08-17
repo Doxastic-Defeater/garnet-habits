@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Garnet habits</title>
+<style>
+  body { margin: 0; background: #000; color: #e8e4dc; font: 14px/1.5 system-ui, sans-serif;
+         display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+  main { width: min(560px, 94vw); padding: 24px 0 48px; }
+  h1 { font: 400 17px/1.3 Georgia, serif; letter-spacing: 0.06em; color: #b9b2a4; margin: 8px 0 20px; text-align: center; }
+  canvas { width: 100%; height: auto; display: block; }
+  .labels { text-align: center; margin: 14px 0 6px; min-height: 40px; }
+  #habit-label { font-size: 15px; }
+  #var-label { font-size: 12px; color: #8a857a; margin-top: 3px; }
+  .row { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+  .row label { font-size: 13px; color: #8a857a; min-width: 56px; }
+  .row output { font-size: 13px; min-width: 78px; text-align: right; }
+  input[type=range] { flex: 1; accent-color: #b9b2a4; background: transparent; }
+</style>
+</head>
+<body>
+<main>
+  <h1>GARNET · continuous form space</h1>
+  <canvas id="xtal" width="1120" height="1120"></canvas>
+  <div class="labels">
+    <div id="habit-label">Dodecahedron d{110}</div>
+    <div id="var-label">favored by grossular, andradite, uvarovite</div>
+  </div>
+  <div class="row"><label for="morph">Habit</label><input type="range" id="morph" min="0" max="2" step="0.005" value="0"><output>&nbsp;</output></div>
+  <div class="row"><label for="variety">Variety</label><input type="range" id="variety" min="0" max="6" step="1" value="0"><output id="variety-out">White</output></div>
+  <div class="row"><label for="opacity">Opacity</label><input type="range" id="opacity" min="0.05" max="1" step="0.05" value="1"><output id="opacity-out">100%</output></div>
+  <div class="row"><label for="speed">Spin</label><input type="range" id="speed" min="0" max="3" step="0.1" value="1"><output id="speed-out">1.0x</output></div>
+</main>
+<script src="src/engine.js"></script>
+<script>
+(function() {
+  const { shapeAt } = window.GarnetEngine;
+  const canvas = document.getElementById('xtal');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  const STEPS = 40;
+  const ladder = [];
+  for (let i = 0; i <= STEPS; i++) ladder.push(shapeAt(2 * i / STEPS));
+  const d2 = (p,q) => (p[0]-q[0])**2 + (p[1]-q[1])**2 + (p[2]-q[2])**2;
+  const pairs = [];
+  for (let i = 0; i < STEPS; i++) {
+    const A = ladder[i], B = ladder[i+1];
+    const sh = [], out = [], inn = [];
+    for (const [k, sa] of A) {
+      if (B.has(k)) {
+        let sb = B.get(k);
+        if (d2(sa[0],sb[0]) + d2(sa[1],sb[1]) > d2(sa[0],sb[1]) + d2(sa[1],sb[0])) sb = [sb[1], sb[0]];
+        sh.push([sa[0], sa[1], sb[0], sb[1]]);
+      } else out.push(sa);
+    }
+    for (const [k, sb] of B) if (!A.has(k)) inn.push(sb);
+    pairs.push({ sh, out, inn });
+  }
+
+  const habits = [
+    [0.025, 'Dodecahedron d{110}', 'favored by grossular, andradite, uvarovite'],
+    [0.975, 'Combination d{110} + n{211}', 'the classic garnet: almandine, pyrope, grossular'],
+    [1.025, 'Trapezohedron n{211}', 'favored by almandine, spessartine, pyrope'],
+    [1.975, 'Combination n{211} + {321}', 'spessartine and andradite with hexoctahedral faces'],
+    [9, 'Hexoctahedron {321}', 'rare: melanite andradite']
+  ];
+  const varieties = [
+    ['White', [255,255,255]], ['Pyrope', [214,32,74]], ['Almandine', [186,62,110]],
+    ['Spessartine', [244,120,28]], ['Hessonite', [222,156,60]], ['Demantoid', [128,196,64]],
+    ['Uvarovite', [24,180,110]]
+  ];
+
+  let rx = 0.4, ry = 0.2, speed = 1, morphT = 0, morphTarget = 0, master = 1, col = varieties[0][1];
+  const $ = id => document.getElementById(id);
+  $('speed').addEventListener('input', function() {
+    speed = parseFloat(this.value);
+    $('speed-out').textContent = speed.toFixed(1) + 'x';
+  });
+  $('opacity').addEventListener('input', function() {
+    master = parseFloat(this.value);
+    $('opacity-out').textContent = Math.round(master * 100) + '%';
+  });
+  $('variety').addEventListener('input', function() {
+    const v = varieties[parseInt(this.value)];
+    col = v[1];
+    const o = $('variety-out');
+    o.textContent = v[0];
+    o.style.color = this.value === '0' ? '#e8e4dc' : 'rgb(' + v[1].join(',') + ')';
+  });
+  $('morph').addEventListener('input', function() {
+    morphTarget = parseFloat(this.value);
+    for (const h of habits) {
+      if (morphTarget < h[0]) {
+        $('habit-label').textContent = h[1];
+        $('var-label').textContent = h[2];
+        break;
+      }
+    }
+  });
+
+  function rotP(v, cy, sy, cx, sx) {
+    const x1 = v[0]*cy + v[2]*sy, z1 = -v[0]*sy + v[2]*cy;
+    return [x1, v[1]*cx - z1*sx, v[1]*sx + z1*cx];
+  }
+
+  function frame() {
+    ry += 0.006 * speed;
+    rx += 0.0025 * speed;
+    morphT += (morphTarget - morphT) * 0.1;
+    const m = Math.max(0, Math.min(2, morphT));
+    const s = m / 2 * STEPS;
+    const i = Math.min(STEPS - 1, Math.floor(s));
+    const f = s - i;
+    const P = pairs[i];
+
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, W, H);
+    const cam = 5.2, scale = W * 0.74;
+    ctx.lineCap = 'round';
+    const cy = Math.cos(ry), sy = Math.sin(ry), cx = Math.cos(rx), sx = Math.sin(rx);
+    const cstr = col[0] + ',' + col[1] + ',' + col[2];
+
+    function draw(a, b, fade) {
+      const p1 = rotP(a, cy, sy, cx, sx), p2 = rotP(b, cy, sy, cx, sx);
+      const dt = Math.max(0, Math.min(1, ((p1[2]+p2[2])/2 + 1.8) / 3.6));
+      const alpha = (0.2 + 0.75*dt) * master * fade;
+      if (alpha < 0.01) return;
+      ctx.strokeStyle = 'rgba(' + cstr + ',' + alpha.toFixed(3) + ')';
+      ctx.lineWidth = 1.8 + 2.2*dt;
+      const s1 = scale / (cam - p1[2]), s2 = scale / (cam - p2[2]);
+      ctx.beginPath();
+      ctx.moveTo(W/2 + p1[0]*s1, H/2 - p1[1]*s1);
+      ctx.lineTo(W/2 + p2[0]*s2, H/2 - p2[1]*s2);
+      ctx.stroke();
+    }
+
+    for (const e of P.sh) draw(
+      [e[0][0]+(e[2][0]-e[0][0])*f, e[0][1]+(e[2][1]-e[0][1])*f, e[0][2]+(e[2][2]-e[0][2])*f],
+      [e[1][0]+(e[3][0]-e[1][0])*f, e[1][1]+(e[3][1]-e[1][1])*f, e[1][2]+(e[3][2]-e[1][2])*f], 1);
+    for (const e of P.out) draw(e[0], e[1], 1 - f);
+    for (const e of P.inn) draw(e[0], e[1], f);
+    requestAnimationFrame(frame);
+  }
+  frame();
+})();
+</script>
+</body>
+</html>
