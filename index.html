@@ -14,7 +14,7 @@
   #habit-label { font-size: 15px; }
   #var-label { font-size: 12px; color: #8a857a; margin-top: 3px; }
   .row { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
-  .row label { font-size: 13px; color: #8a857a; min-width: 56px; }
+  .row label { font-size: 13px; color: #8a857a; min-width: 80px; }
   .row output { font-size: 13px; min-width: 78px; text-align: right; }
   input[type=range] { flex: 1; accent-color: #b9b2a4; background: transparent; }
 </style>
@@ -28,6 +28,7 @@
     <div id="var-label">favored by grossular, andradite, uvarovite</div>
   </div>
   <div class="row"><label for="morph">Habit</label><input type="range" id="morph" min="0" max="2" step="0.005" value="0"><output>&nbsp;</output></div>
+  <div class="row"><label for="bevel">{321} bevel</label><input type="range" id="bevel" min="0" max="1" step="0.005" value="0"><output id="bevel-out">0%</output></div>
   <div class="row"><label for="variety">Variety</label><input type="range" id="variety" min="0" max="6" step="1" value="0"><output id="variety-out">White</output></div>
   <div class="row"><label for="opacity">Opacity</label><input type="range" id="opacity" min="0.05" max="1" step="0.05" value="1"><output id="opacity-out">100%</output></div>
   <div class="row"><label for="speed">Spin</label><input type="range" id="speed" min="0" max="3" step="0.1" value="1"><output id="speed-out">1.0x</output></div>
@@ -35,44 +36,29 @@
 <script src="src/engine.js"></script>
 <script>
 (function() {
-  const { shapeAt } = window.GarnetEngine;
+  const { shapeAt, formsPresent } = window.GarnetEngine;
   const canvas = document.getElementById('xtal');
   const ctx = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
 
-  const STEPS = 40;
-  const ladder = [];
-  for (let i = 0; i <= STEPS; i++) ladder.push(shapeAt(2 * i / STEPS));
-  const d2 = (p,q) => (p[0]-q[0])**2 + (p[1]-q[1])**2 + (p[2]-q[2])**2;
-  const pairs = [];
-  for (let i = 0; i < STEPS; i++) {
-    const A = ladder[i], B = ladder[i+1];
-    const sh = [], out = [], inn = [];
-    for (const [k, sa] of A) {
-      if (B.has(k)) {
-        let sb = B.get(k);
-        if (d2(sa[0],sb[0]) + d2(sa[1],sb[1]) > d2(sa[0],sb[1]) + d2(sa[1],sb[0])) sb = [sb[1], sb[0]];
-        sh.push([sa[0], sa[1], sb[0], sb[1]]);
-      } else out.push(sa);
-    }
-    for (const [k, sb] of B) if (!A.has(k)) inn.push(sb);
-    pairs.push({ sh, out, inn });
-  }
-
-  const habits = [
-    [0.025, 'Dodecahedron d{110}', 'favored by grossular, andradite, uvarovite'],
-    [0.975, 'Combination d{110} + n{211}', 'the classic garnet: almandine, pyrope, grossular'],
-    [1.025, 'Trapezohedron n{211}', 'favored by almandine, spessartine, pyrope'],
-    [1.975, 'Combination n{211} + {321}', 'spessartine and andradite with hexoctahedral faces'],
-    [9, 'Hexoctahedron {321}', 'rare: melanite andradite']
-  ];
+  const habits = {
+    d:   ['Dodecahedron d{110}', 'favored by grossular, andradite, uvarovite'],
+    dn:  ['Combination d{110} + n{211}', 'the classic garnet: almandine, pyrope, grossular'],
+    n:   ['Trapezohedron n{211}', 'favored by almandine, spessartine, pyrope'],
+    nh:  ['Combination n{211} + {321}', 'spessartine and andradite with hexoctahedral faces'],
+    h:   ['Hexoctahedron {321}', 'rare: melanite andradite'],
+    dh:  ['Combination d{110} + {321}', 'dodecahedron with hexoctahedral bevels — melanite andradite'],
+    dnh: ['Combination d{110} + n{211} + {321}', 'the classic d+n habit with hexoctahedral bevels']
+  };
   const varieties = [
     ['White', [255,255,255]], ['Pyrope', [214,32,74]], ['Almandine', [186,62,110]],
     ['Spessartine', [244,120,28]], ['Hessonite', [222,156,60]], ['Demantoid', [128,196,64]],
     ['Uvarovite', [24,180,110]]
   ];
 
-  let rx = 0.4, ry = 0.2, speed = 1, morphT = 0, morphTarget = 0, master = 1, col = varieties[0][1];
+  let rx = 0.4, ry = 0.2, speed = 1, master = 1, col = varieties[0][1];
+  let tTgt = 0, tCur = 0, mTgt = 0, mCur = 0;
+  let shape = null, shapeT = NaN, shapeM = NaN, habitKey = '';
   const $ = id => document.getElementById(id);
   $('speed').addEventListener('input', function() {
     speed = parseFloat(this.value);
@@ -90,14 +76,11 @@
     o.style.color = this.value === '0' ? '#e8e4dc' : 'rgb(' + v[1].join(',') + ')';
   });
   $('morph').addEventListener('input', function() {
-    morphTarget = parseFloat(this.value);
-    for (const h of habits) {
-      if (morphTarget < h[0]) {
-        $('habit-label').textContent = h[1];
-        $('var-label').textContent = h[2];
-        break;
-      }
-    }
+    tTgt = parseFloat(this.value);
+  });
+  $('bevel').addEventListener('input', function() {
+    mTgt = parseFloat(this.value);
+    $('bevel-out').textContent = Math.round(mTgt * 100) + '%';
   });
 
   function rotP(v, cy, sy, cx, sx) {
@@ -108,12 +91,22 @@
   function frame() {
     ry += 0.006 * speed;
     rx += 0.0025 * speed;
-    morphT += (morphTarget - morphT) * 0.1;
-    const m = Math.max(0, Math.min(2, morphT));
-    const s = m / 2 * STEPS;
-    const i = Math.min(STEPS - 1, Math.floor(s));
-    const f = s - i;
-    const P = pairs[i];
+    tCur += (tTgt - tCur) * 0.1;
+    if (Math.abs(tTgt - tCur) < 1e-4) tCur = tTgt;
+    mCur += (mTgt - mCur) * 0.1;
+    if (Math.abs(mTgt - mCur) < 1e-4) mCur = mTgt;
+    const t = Math.max(0, Math.min(2, tCur)), m = Math.max(0, Math.min(1, mCur));
+    if (t !== shapeT || m !== shapeM) {
+      shape = shapeAt(t, m);
+      shapeT = t; shapeM = m;
+      const f = formsPresent(shape);
+      const key = (f.d ? 'd' : '') + (f.n ? 'n' : '') + (f.h ? 'h' : '');
+      if (key !== habitKey && habits[key]) {
+        habitKey = key;
+        $('habit-label').textContent = habits[key][0];
+        $('var-label').textContent = habits[key][1];
+      }
+    }
 
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, W, H);
@@ -136,11 +129,7 @@
       ctx.stroke();
     }
 
-    for (const e of P.sh) draw(
-      [e[0][0]+(e[2][0]-e[0][0])*f, e[0][1]+(e[2][1]-e[0][1])*f, e[0][2]+(e[2][2]-e[0][2])*f],
-      [e[1][0]+(e[3][0]-e[1][0])*f, e[1][1]+(e[3][1]-e[1][1])*f, e[1][2]+(e[3][2]-e[1][2])*f], 1);
-    for (const e of P.out) draw(e[0], e[1], 1 - f);
-    for (const e of P.inn) draw(e[0], e[1], f);
+    for (const [, s] of shape) draw(s[0], s[1], 1);
     requestAnimationFrame(frame);
   }
   frame();
