@@ -22,7 +22,13 @@ crystal form computed from its Miller indices, not an artistic interpolation.
   only one step fade in/out (these are nucleating/vanishing edges and are
   provably coincident with their replacements — see test suite).
 
-## Crystallography invariants (enforced by tests)
+## Crystallography invariants
+
+The table below is verified correct — but the suite asserts **edge counts only**.
+V, F, Euler, symmetry and form purity are never computed, so most of this section
+is documentation, not enforcement. Concretely: setting KN0 := 1.20 (true value
+1.154701, 4% wrong) still passes every asserted count, because an over-large KN0
+merely delays nucleation. Only the inward constants are pinned.
 
 | t   | form                    | V/E/F        |
 |-----|-------------------------|--------------|
@@ -32,11 +38,32 @@ crystal form computed from its Miller indices, not an artistic interpolation.
 | 1.5 | n+h combination         | 74/144/72    |
 | 2   | {321} hexoctahedron     | 26/72/48     |
 
-Euler V−E+F=2 everywhere. Truncation ranges use exact radicals: {211} spans
-k = 2/sqrt(3) (tangent to d) down to sqrt(3)/2 (d vanishes); {321} spans
-5*sqrt(6)/(3*sqrt(14)) down to 3*sqrt(6)/(2*sqrt(14)). The 1.000001 nudge
-factors on the tangency endpoints are load-bearing: float-imprecise constants
-previously produced sliver faces (48 edges at t=0 instead of 24).
+Euler V−E+F=2 holds at every step of the 41-step ladder — but not literally
+everywhere. The `len2 < 1e-10` cull in clipShape drops the emerging form's edges
+inside four ~1e-5-wide windows around t = 0, 1, 2, where its faces have already
+split the neighbouring form's vertices; the wireframe then has vertices for a
+polyhedron it has no edges or faces for. χ hits 36 at t=1e-5, 38 at t=1−1e-6.
+Total broken measure ~5e-5 out of a domain of 2, and the ladder never samples
+inside one — so nothing user-visible regresses, but don't call it an invariant
+for arbitrary t.
+
+Truncation ranges use exact radicals: {211} spans k = 2/sqrt(3) (tangent to d)
+down to sqrt(3)/2 (d vanishes); {321} spans 5*sqrt(6)/(3*sqrt(14)) down to
+3*sqrt(6)/(2*sqrt(14)). All four re-derived and confirmed exact to ≤2e-16.
+
+The 1.000001 nudge factors are load-bearing at **KH1 / t=2**, not at t=0:
+removing KH1's alone gives 96 edges instead of 72. Removing KN0's or KH0's
+changes no asserted value today — but keep all three. KN0 and KH1 are the two
+*edge*-tangency endpoints, which are the sliver-prone ones (an edge tangency
+degenerates to a finite-length zero-width face that survives the cull; a point
+tangency collapses to a point and does not), and Math.hypot precision is
+implementation-defined, so KN0 surviving unnudged here is not portable. The
+`*` vs `/` asymmetry is deliberate: KN0/KH0 move outward to suppress a
+nucleating form, KH1 inward to suppress a vanishing one.
+
+The attribution tolerance at engine.js:55 is coupled to these nudges — it must
+stay below the ~1e-6 separation they create. Working window is ~1e-14 to ~5e-7;
+1e-7 sits within one decade of the top edge, and 1e-6 breaks t=2.
 
 ## Hard-won lessons (do not regress)
 
