@@ -217,3 +217,22 @@ V8 handles the naive version better. The only free win is deleting the dead `src
   and every fader self-covers at distance 0, turning the check into a vacuous PASS.
 - `STEPS = 40` correctly mirrors `index.html:43`.
 - Returned edge arrays are freshly allocated, so callers cannot mutate engine internals.
+
+---
+
+## Resolution (v1.0.0)
+
+Everything above is the review as written; nothing in it has been edited. This section
+records where each item landed.
+
+| # | Item | Status |
+|---|------|--------|
+| 1 | Viewer broken in a browser | **Fixed** in `5cf7d5a` — guarded exports, `window.GarnetEngine` set first. A `vm` load-smoke check now covers it. |
+| 2 | Nudge documented on the wrong endpoint | **Fixed** (docs) in `d87bfa0`. |
+| 3 | Attribution tolerance coupled to the nudge | **Fixed** this release — tolerance 1e-7 → **1e-10**, verified bit-identical across a 21×21 grid and the 41-step ladder. |
+| 4 | Suite asserts none of the claimed invariants | **Fixed** this release — invariant suite, **13 checks**: V/E/F/χ, m-3m symmetry, form purity, face census, vertex shells, tangency pinning at k(1±1e-4), seam and 2D continuity, `RangeError` domain, `vm` load smoke, golden-path fixtures. |
+| 5 | "Euler χ=2 everywhere" false in narrow windows | **Doc-only**, as scoped. CLAUDE.md now also records that the windows run along the b_n / b_d transition curves; the ladder and the test grid never sample them. |
+| 6 | Pure {321} is legal but not an observed habit | **Implemented** this release as the 2-parameter form space: `formAt(a,b)` over the full square plus a **"{321} bevel"** slider, which produces d+h (hexoctahedral bevels on a dodecahedron) and d+n+h. The {311}-on-grossular claim stays unverified and out of the UI. |
+| 7 | Minors | **Fixed** this release — `RangeError` on bad `shapeAt`/`formAt` input, dead `src` field removed, NaN-guard on the displacement check. |
+| — | Performance | **No change**, as scoped — the reviewer's optimization measured slower. |
+
