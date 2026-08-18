@@ -3,36 +3,91 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Garnet habits</title>
-<style>
-  body { margin: 0; background: #000; color: #e8e4dc; font: 14px/1.5 system-ui, sans-serif;
-         display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
-  main { width: min(560px, 94vw); padding: 24px 0 48px; }
-  h1 { font: 400 17px/1.3 Georgia, serif; letter-spacing: 0.06em; color: #b9b2a4; margin: 8px 0 20px; text-align: center; }
-  canvas { width: 100%; height: auto; display: block; }
-  .labels { text-align: center; margin: 14px 0 6px; min-height: 40px; }
-  #habit-label { font-size: 15px; }
-  #var-label { font-size: 12px; color: #8a857a; margin-top: 3px; }
-  .row { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
-  .row label { font-size: 13px; color: #8a857a; min-width: 80px; }
-  .row output { font-size: 13px; min-width: 78px; text-align: right; }
-  input[type=range] { flex: 1; accent-color: #b9b2a4; background: transparent; }
-</style>
+<title>Garnet habits — continuous crystallographic form space</title>
+<meta name="description" content="Interactive wireframe visualization of garnet crystal habits: two sliders sweep a continuous 2-parameter space of the real isometric garnet forms — d{110} rhombic dodecahedron, n{211} trapezohedron and {321} hexoctahedron — in every combination they can occur in.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="site.css">
+<meta property="og:title" content="Garnet habits — continuous crystallographic form space">
+<meta property="og:description" content="Every frame is a true crystal form computed from its Miller indices — not an artistic interpolation.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://doxastic-defeater.github.io/garnet-habits/">
+<meta property="og:image" content="https://doxastic-defeater.github.io/garnet-habits/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Garnet habits — continuous crystallographic form space">
+<meta name="twitter:description" content="Every frame is a true crystal form computed from its Miller indices — not an artistic interpolation.">
+<meta name="twitter:image" content="https://doxastic-defeater.github.io/garnet-habits/assets/og.png">
 </head>
 <body>
-<main>
-  <h1>GARNET · continuous form space</h1>
-  <canvas id="xtal" width="1120" height="1120"></canvas>
-  <div class="labels">
-    <div id="habit-label">Dodecahedron d{110}</div>
-    <div id="var-label">favored by grossular, andradite, uvarovite</div>
+
+<header class="site-header">
+  <div class="wrap">
+    <h1>Garnet habits</h1>
+    <nav class="site-nav" aria-label="Sections">
+      <a href="#viewer">Viewer</a>
+      <a href="#gallery">Gallery</a>
+      <a href="#sliders">Sliders</a>
+      <a href="#how">How it works</a>
+      <a href="#engine">Engine</a>
+      <a href="#references">References</a>
+      <a href="https://github.com/Doxastic-Defeater/garnet-habits">GitHub</a>
+    </nav>
+    <p class="tagline">Every frame is a true crystal form computed from its Miller indices — not an artistic interpolation.</p>
   </div>
-  <div class="row"><label for="morph">Habit</label><input type="range" id="morph" min="0" max="2" step="0.005" value="0"><output>&nbsp;</output></div>
-  <div class="row"><label for="bevel">{321} bevel</label><input type="range" id="bevel" min="0" max="1" step="0.005" value="0"><output id="bevel-out">0%</output></div>
-  <div class="row"><label for="variety">Variety</label><input type="range" id="variety" min="0" max="6" step="1" value="0"><output id="variety-out">White</output></div>
-  <div class="row"><label for="opacity">Opacity</label><input type="range" id="opacity" min="0.05" max="1" step="0.05" value="1"><output id="opacity-out">100%</output></div>
-  <div class="row"><label for="speed">Spin</label><input type="range" id="speed" min="0" max="3" step="0.1" value="1"><output id="speed-out">1.0x</output></div>
+</header>
+
+<main>
+
+  <section id="viewer">
+    <div class="wrap-viewer">
+      <canvas id="xtal" width="1120" height="1120"></canvas>
+      <div class="labels">
+        <div id="habit-label">Dodecahedron d{110}</div>
+        <div id="var-label">favored by grossular, andradite, uvarovite</div>
+      </div>
+      <div class="row"><label for="morph">Habit</label><input type="range" id="morph" min="0" max="2" step="0.005" value="0"><output>&nbsp;</output></div>
+      <div class="row"><label for="bevel">{321} bevel</label><input type="range" id="bevel" min="0" max="1" step="0.005" value="0"><output id="bevel-out">0%</output></div>
+      <div class="row"><label for="variety">Variety</label><input type="range" id="variety" min="0" max="6" step="1" value="0"><output id="variety-out">White</output></div>
+      <div class="row"><label for="opacity">Opacity</label><input type="range" id="opacity" min="0.05" max="1" step="0.05" value="1"><output id="opacity-out">100%</output></div>
+      <div class="row"><label for="speed">Spin</label><input type="range" id="speed" min="0" max="3" step="0.1" value="1"><output id="speed-out">1.0x</output></div>
+
+      <div class="chips" id="presets" role="group" aria-label="Habit presets">
+        <span class="chips-label">Presets</span>
+        <button type="button" class="chip" data-t="0" data-m="0">d{110}</button>
+        <button type="button" class="chip" data-t="0.5" data-m="0">d+n</button>
+        <button type="button" class="chip" data-t="1" data-m="0">n{211}</button>
+        <button type="button" class="chip" data-t="1.5" data-m="0">n+h</button>
+        <button type="button" class="chip" data-t="2" data-m="0">{321}</button>
+        <button type="button" class="chip" data-t="0" data-m="0.5">d+h</button>
+        <button type="button" class="chip" data-t="0.5" data-m="0.3">d+n+h</button>
+      </div>
+
+      <div class="btn-row">
+        <button type="button" class="btn" id="copy-link">Copy link</button>
+        <button type="button" class="btn" id="save-png">Save PNG</button>
+        <span class="btn-note" id="btn-note" role="status" aria-live="polite"></span>
+      </div>
+    </div>
+  </section>
+
+  <section id="gallery"><div class="wrap"><h2>Gallery</h2><!-- @@GALLERY --></div></section>
+
+  <section id="sliders"><div class="wrap"><h2>What the sliders mean</h2><!-- @@SLIDERS --></div></section>
+
+  <section id="how"><div class="wrap"><h2>How it works</h2><!-- @@HOW --></div></section>
+
+  <section id="engine"><div class="wrap"><h2>Using the engine</h2><!-- @@ENGINE --></div></section>
+
+  <section id="references"><div class="wrap"><h2>References</h2><!-- @@REFS --></div></section>
+
 </main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p><a href="https://github.com/Doxastic-Defeater/garnet-habits/blob/master/LICENSE">MIT License</a> · <a href="https://github.com/Doxastic-Defeater/garnet-habits">Source on GitHub</a></p>
+    <p><a href="https://github.com/Doxastic-Defeater/garnet-habits/blob/master/CLAUDE.md">CLAUDE.md — architecture &amp; invariants</a> · <a href="https://github.com/Doxastic-Defeater/garnet-habits/blob/master/REVIEW.md">REVIEW.md — review</a></p>
+  </div>
+</footer>
+
 <script src="src/engine.js"></script>
 <script>
 (function() {
@@ -57,9 +112,70 @@
   ];
 
   let rx = 0.4, ry = 0.2, speed = 1, master = 1, col = varieties[0][1];
-  let tTgt = 0, tCur = 0, mTgt = 0, mCur = 0;
+  let tTgt = 0, tCur = 0, mTgt = 0, mCur = 0, vIdx = 0;
   let shape = null, shapeT = NaN, shapeM = NaN, habitKey = '';
   const $ = id => document.getElementById(id);
+
+  // ------------------------------------------------------------- state I/O
+
+  const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
+  // Slider step is 0.005, so 3 decimals is lossless; trim trailing zeros.
+  const fmt = x => (+x.toFixed(3)).toString();
+
+  function setHabit(t, ease) {
+    tTgt = clamp(t, 0, 2);
+    $('morph').value = tTgt;
+    if (!ease) tCur = tTgt;
+  }
+  function setBevel(m, ease) {
+    mTgt = clamp(m, 0, 1);
+    $('bevel').value = mTgt;
+    $('bevel-out').textContent = Math.round(mTgt * 100) + '%';
+    if (!ease) mCur = mTgt;
+  }
+  function setVariety(v) {
+    vIdx = clamp(Math.round(v), 0, varieties.length - 1);
+    $('variety').value = vIdx;
+    col = varieties[vIdx][1];
+    const o = $('variety-out');
+    o.textContent = varieties[vIdx][0];
+    o.style.color = vIdx === 0 ? '#e8e4dc' : 'rgb(' + varieties[vIdx][1].join(',') + ')';
+  }
+
+  // Query string carries only t, m, v; defaults (0,0,0) are omitted.
+  function syncURL() {
+    const q = [];
+    if (tTgt !== 0) q.push('t=' + fmt(tTgt));
+    if (mTgt !== 0) q.push('m=' + fmt(mTgt));
+    if (vIdx !== 0) q.push('v=' + vIdx);
+    const url = location.pathname + (q.length ? '?' + q.join('&') : '') + location.hash;
+    history.replaceState(null, '', url);
+  }
+
+  function markPresets() {
+    for (const b of document.querySelectorAll('#presets .chip')) {
+      const on = Math.abs(parseFloat(b.dataset.t) - tTgt) < 1e-9
+              && Math.abs(parseFloat(b.dataset.m) - mTgt) < 1e-9;
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+  }
+
+  function readURL() {
+    const p = new URLSearchParams(location.search);
+    const num = (key, lo, hi) => {
+      if (!p.has(key)) return null;
+      const x = parseFloat(p.get(key));
+      return Number.isFinite(x) ? clamp(x, lo, hi) : null;
+    };
+    const t = num('t', 0, 2), m = num('m', 0, 1), v = num('v', 0, varieties.length - 1);
+    if (t !== null) setHabit(t, false);
+    if (m !== null) setBevel(m, false);
+    if (v !== null) setVariety(Math.round(v));
+    markPresets();
+  }
+
+  // ------------------------------------------------------------- controls
+
   $('speed').addEventListener('input', function() {
     speed = parseFloat(this.value);
     $('speed-out').textContent = speed.toFixed(1) + 'x';
@@ -69,19 +185,77 @@
     $('opacity-out').textContent = Math.round(master * 100) + '%';
   });
   $('variety').addEventListener('input', function() {
-    const v = varieties[parseInt(this.value)];
-    col = v[1];
-    const o = $('variety-out');
-    o.textContent = v[0];
-    o.style.color = this.value === '0' ? '#e8e4dc' : 'rgb(' + v[1].join(',') + ')';
+    setVariety(parseInt(this.value, 10));
+    syncURL();
   });
   $('morph').addEventListener('input', function() {
     tTgt = parseFloat(this.value);
+    markPresets();
+    syncURL();
   });
   $('bevel').addEventListener('input', function() {
     mTgt = parseFloat(this.value);
     $('bevel-out').textContent = Math.round(mTgt * 100) + '%';
+    markPresets();
+    syncURL();
   });
+
+  for (const b of document.querySelectorAll('#presets .chip')) {
+    b.addEventListener('click', function() {
+      setHabit(parseFloat(this.dataset.t), true);
+      setBevel(parseFloat(this.dataset.m), true);
+      markPresets();
+      syncURL();
+    });
+  }
+
+  let noteTimer = 0;
+  function note(msg) {
+    $('btn-note').textContent = msg;
+    clearTimeout(noteTimer);
+    noteTimer = setTimeout(() => { $('btn-note').textContent = ''; }, 1800);
+  }
+
+  $('copy-link').addEventListener('click', function() {
+    const href = location.href;
+    const fallback = () => {
+      const ta = document.createElement('textarea');
+      ta.value = href;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      let ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      document.body.removeChild(ta);
+      note(ok ? 'Copied' : 'Copy failed');
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(href).then(() => note('Copied'), fallback);
+    } else {
+      fallback();
+    }
+  });
+
+  $('save-png').addEventListener('click', function() {
+    const name = 'garnet-' + (habitKey || 'd') + '-t' + fmt(tTgt) + '-m' + fmt(mTgt) + '.png';
+    const save = blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      note('Saved ' + name);
+    };
+    if (canvas.toBlob) canvas.toBlob(blob => { if (blob) save(blob); else note('Save failed'); }, 'image/png');
+    else note('Save failed');
+  });
+
+  // ------------------------------------------------------------- render
 
   function rotP(v, cy, sy, cx, sx) {
     const x1 = v[0]*cy + v[2]*sy, z1 = -v[0]*sy + v[2]*cy;
@@ -132,6 +306,23 @@
     for (const [, s] of shape) draw(s[0], s[1], 1);
     requestAnimationFrame(frame);
   }
+
+  // ------------------------------------------------------------- public API
+
+  window.GarnetViewer = {
+    getState() { return { t: tTgt, m: mTgt, v: vIdx, habit: habitKey }; },
+    setState(s) {
+      s = s || {};
+      const ease = s.ease !== false;
+      if (Number.isFinite(s.t)) setHabit(s.t, ease);
+      if (Number.isFinite(s.m)) setBevel(s.m, ease);
+      if (Number.isFinite(s.v)) setVariety(s.v);
+      markPresets();
+      syncURL();
+    }
+  };
+
+  readURL();
   frame();
 })();
 </script>
