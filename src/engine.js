@@ -76,6 +76,7 @@ function shapeAt(t) {
   const kh = KH0 + (KH1 - KH0) * (t - 1);
   return clipShape([...makePlanes([2,1,1], 1, 'n'), ...makePlanes([3,2,1], kh, 'h')]);
 }
-module.exports = { shapeAt };
-
+// Browser global first: a bare `module` reference throws ReferenceError in a
+// classic <script>, which would abort before GarnetEngine is ever assigned.
 if (typeof window !== 'undefined') window.GarnetEngine = { shapeAt };
+if (typeof module !== 'undefined') module.exports = { shapeAt };
