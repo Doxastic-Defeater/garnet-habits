@@ -1,0 +1,4 @@
+# Generated assets are compared byte-for-byte in CI, so line endings must not
+# depend on the platform that checked the repo out.
+* text=auto eol=lf
+*.png binary
